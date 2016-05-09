@@ -89,4 +89,12 @@ getLevel x Empty = []
 getLevel x currTree@(Node x2 left right) 
 	| (x == 0) = [x2] ++ (getLevel (x-1) left) ++ (getLevel (x-1) right)
 	| otherwise = (getLevel (x-1) left) ++ (getLevel (x-1) right) 
+
+-- return tree with level
+enumerateLevel Empty _ = Empty
+enumerateLevel (Node x left right) level = Node (x,level) (enumerateLevel left (level+1)) (enumerateLevel right (level+1))
+
 	
+	
+
+
