@@ -1,6 +1,8 @@
 import Data.Char
 data MTree a = Empty | Node a (MTree a) (MTree a) deriving (Eq, Show, Read)
 
+nums = [7,3,8,2,4,1,5]
+numsTree = foldr mtreeInsert Empty nums 
 singleton x = Node x Empty Empty
 
 -- insert element into the tree
@@ -55,7 +57,7 @@ tmap operation (Node x left right) = tmap operation left ++ [operation x] ++ tma
 
 -- binary tree to string
 toString Empty = ""
-toString (Node x left right) = "(" ++ x :[] ++ toString left ++ toString right ++ ")"
+toString (Node x left right) = "(" ++ show(x :[]) ++ toString left ++ toString right ++ ")"
 
 -- is balanced tree
 isBalanced :: MTree a -> Bool
@@ -69,3 +71,22 @@ isBinary :: MTree a -> Bool
 isBinary (Empty) = True;
 isBinary (Node x l r) = 
 	isBinary l && isBinary r
+
+-- getValue
+getValue Empty = ""
+getValue (Node x left right) = "" ++ show x
+
+getValue2 x Empty = ""
+getValue2 x (Node x2 left right) = "\n" ++ show x ++ " -> " ++ show x2
+
+-- tree in DOT format
+dumpDOT Empty = ""
+dumpDOT (Node x left right) =
+	getValue2 x left  ++ getValue2 x right ++ dumpDOT left ++ dumpDOT right
+
+-- get level function
+getLevel x Empty = []
+getLevel x currTree@(Node x2 left right) 
+	| (x == 0) = [x2] ++ (getLevel (x-1) left) ++ (getLevel (x-1) right)
+	| otherwise = (getLevel (x-1) left) ++ (getLevel (x-1) right) 
+	
