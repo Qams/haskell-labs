@@ -1,5 +1,5 @@
 import Data.Char
-data MTree a = Empty | Node a (MTree a) (MTree a) deriving (Eq, Show, Read)
+data MTree a = Empty | Node a (MTree a) (MTree a) deriving (Eq, Read)
 
 nums = [7,3,8,2,4,1,5]
 numsTree = foldr mtreeInsert Empty nums 
@@ -94,7 +94,20 @@ getLevel x currTree@(Node x2 left right)
 enumerateLevel Empty _ = Empty
 enumerateLevel (Node x left right) level = Node (x,level) (enumerateLevel left (level+1)) (enumerateLevel right (level+1))
 
-	
-	
+-- implements show
+instance Show a => Show (MTree a) where
+	show Empty = "Empty"
+	show (Node x left right) = show x ++ "(" ++ (show left) ++ " " ++ (show right) ++ ")"
 
+-- tree convert MTree to STree
+data STree a = SEmpty | SLeaf a | SBranch a (STree a) (STree a) deriving Show
 
+convertTo Empty = SEmpty
+convertTo (Node x Empty Empty) = SLeaf x
+convertTo (Node x left right) = SBranch x (convertTo left) (convertTo right)
+	
+-- tree convert STree to MTree
+
+convertFrom SEmpty = Empty
+convertFrom (SLeaf x) = Node x Empty Empty
+convertFrom (SBranch x left right) = Node x (convertFrom left) (convertFrom right)
