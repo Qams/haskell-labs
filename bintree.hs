@@ -111,3 +111,18 @@ convertTo (Node x left right) = SBranch x (convertTo left) (convertTo right)
 convertFrom SEmpty = Empty
 convertFrom (SLeaf x) = Node x Empty Empty
 convertFrom (SBranch x left right) = Node x (convertFrom left) (convertFrom right)
+
+-- function which set tree nodes in XY space, (x,y), where x - position (inorder), y - deep
+getIndex (x:xs) y 
+	|	x == y	= 0
+	| 	otherwise =  (getIndex xs y) + 1 
+
+findDepth x mtree lvl 
+	| 	x `elem` (getLevel lvl (mtree)) = lvl
+	| 	otherwise = findDepth x mtree (lvl + 1)
+
+getDepth [] mtree = []
+getDepth (x:xs) mtree = (findDepth x mtree 0) : (getDepth xs mtree)
+
+makeLayout mtree = zip (map (getIndex (inorder mtree))  (inorder mtree)) (getDepth (inorder mtree) mtree)
+--makeLayout2 mtree = (map (getDepth (inorder mtree)) (inorder mtree)) 
