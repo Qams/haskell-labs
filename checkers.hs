@@ -50,5 +50,9 @@ parseToBoard (x:xs) = initRow x : parseToBoard xs
 initBoard x = parseToBoard(splitOn "\n" x) 
 --instance (Read a) => Read (Board a) where
   --  readsPrec _ value = readsBoard value
+setX x row pawn = take (x-1) row ++ (pawn:[]) ++ drop x row
+
+setPos (x,y) board pawn = take (y-1) board ++ (setX x (board !! (y-1)) pawn):[] ++ drop y board
         
+removePos (x,y) board = setPos (x,y) board Empty
 	
