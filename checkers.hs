@@ -19,8 +19,8 @@ data Pawn = White | Blue | QWhite | QBlue | Empty deriving Eq
 initialBoard = [[Empty,Blue,Empty,Blue,Empty,Blue,Empty,Blue],
 				[Blue,Empty,Blue,Empty,Blue,Empty,Blue,Empty],
 				[Empty,White,Empty,White,Empty,Blue,Empty,Blue],
-				[Empty,Empty,Empty,Empty,Empty,Empty,Empty,Empty],
-				[Empty,Empty,Empty,White,Empty,White,Empty,Empty],
+				[Empty,Empty,Blue,Empty,Empty,Empty,Empty,Empty],
+				[Empty,Empty,Empty,Empty,Empty,White,Empty,Empty],
 				[White,Empty,Empty,Empty,White,Empty,Empty,Empty],
 				[Empty,White,Empty,White,Empty,Empty,Empty,White],
 				[White,Empty,White,Empty,Empty,Empty,White,Empty]]
@@ -64,8 +64,7 @@ initRow (x:xs)
 parseToBoard [] = []
 parseToBoard (x:xs) = initRow x : parseToBoard xs
 initBoard x = parseToBoard(splitOn "\n" x) 
---instance (Read a) => Read (Board a) where
-  --  readsPrec _ value = readsBoard value
+
 setX x row pawn = take (x-1) row ++ (pawn:[]) ++ drop x row
 
 setPos (x,y) pawn board = take (y-1) board ++ (setX x (board !! (y-1)) pawn):[] ++ drop y board
@@ -76,18 +75,27 @@ getPawn (x,y) board = (board !! (y-1)) !! (x-1)
 
 move (x,y) (x1, y1) board = setPos (x1,y1) (getPawn (x,y) board) (setPos(x,y) Empty board) 
 
-checkPossiblePos [] [] _ _ last _ = last ++ []
-checkPossiblePos (p:ps) (d:ds) z pawn last board 
-	|	(pawn == Blue) && (onBoard p) && ((getPawn p board == White) || (getPawn p board == QWhite)) && (onBoard (tupSum p d)) && (getPawn (tupSum p d) board == Empty) = checkPossiblePos ps ds z pawn [] board ++ checkPossiblePos (map (tupSum (tupSum p d)) directions) directions 9 pawn [(tupSum p d)] (setPos p Empty board)
-	|	(pawn == White) && (onBoard p) && ((getPawn p board == Blue) || (getPawn p board == QBlue)) && (onBoard (tupSum p d)) && (getPawn (tupSum p d) board == Empty) = checkPossiblePos ps ds z pawn [] board ++ checkPossiblePos (map (tupSum (tupSum p d)) directions) directions 9 pawn [(tupSum p d)] board
-	|	((snd d) == z) && (onBoard p) && (getPawn p board == Empty) =  p :checkPossiblePos ps ds z pawn last (setPos p Empty board)
-	| 	otherwise = checkPossiblePos ps ds z pawn last board
+listBestResults [] _ = []
+listBestResults (x:xs) m
+	| 	(snd x == m) = (fst x) : listBestResults xs m
+	| 	otherwise = listBestResults xs m
 
-findPossiblePos (x,y) pawn@Blue board =  checkPossiblePos (map (tupSum (x,y)) directions) directions 1 pawn [] board 
+maxAndListBestResults x = listBestResults x (maximum (map snd x))
 
-findPossiblePos (x,y) pawn@White board =  checkPossiblePos (map (tupSum (x,y)) directions) directions (-1) pawn [] board 
+checkPossiblePos [] [] _ _ last jump _ = (zip last [jump]) ++ []
+checkPossiblePos (p:ps) (d:ds) z pawn last jump board 
+	|	(pawn == Blue) && (onBoard p) && ((getPawn p board == White) || (getPawn p board == QWhite)) && (onBoard (tupSum p d)) && (getPawn (tupSum p d) board == Empty) = checkPossiblePos ps ds z pawn [] jump board ++ checkPossiblePos (map (tupSum (tupSum p d)) directions) directions 9 pawn [(tupSum p d)] (jump+1) (setPos p Empty board)
+	|	(pawn == White) && (onBoard p) && ((getPawn p board == Blue) || (getPawn p board == QBlue)) && (onBoard (tupSum p d)) && (getPawn (tupSum p d) board == Empty) = checkPossiblePos ps ds z pawn [] jump board ++ checkPossiblePos (map (tupSum (tupSum p d)) directions) directions 9 pawn [(tupSum p d)] (jump+1) (setPos p Empty board)
+	|	((snd d) == z) && (onBoard p) && (getPawn p board == Empty) =  (zip [p] [jump]) ++ checkPossiblePos ps ds z pawn last jump (setPos p Empty board)
+	| 	otherwise = checkPossiblePos ps ds z pawn last jump board
 
-possiblePos (x,y) board = findPossiblePos (x,y) (getPawn (x,y) board) board
+findPossiblePos (x,y) pawn@Blue board =  checkPossiblePos (map (tupSum (x,y)) directions) directions 1 pawn [] 0 board 
+
+findPossiblePos (x,y) pawn@White board = checkPossiblePos (map (tupSum (x,y)) directions) directions (-1) pawn [] 0 board
+
+findPossiblePos (x,y) pawn@Empty board = []
+
+possiblePos (x,y) board = maxAndListBestResults (findPossiblePos (x,y) (getPawn (x,y) board) board)  
 
 --	|	(onBoard p) && ((getPawn p board == White) || (getPawn p board == QWhite)) && (onBoard (tupSum p d)) && (getPawn (tupSum p d) board == Empty) = (tupSum p d) : checkPossiblePos ps ds z pawn board
 --	|	(onBoard p) && ((getPawn p board == Blue) || (getPawn p board == QBlue)) && (onBoard (tupSum p d)) && (getPawn (tupSum p d) board == Empty) = (tupSum p d) : checkPossiblePos ps ds z pawn board
