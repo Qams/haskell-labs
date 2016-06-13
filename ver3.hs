@@ -41,6 +41,15 @@ testingBoard = [[Empty,Blue,Empty,Blue,Empty,Blue,Empty,Blue],
 				[Empty,White,Empty,White,Empty,White,Empty,Blue],
 				[White,Empty,White,Empty,White,Empty,Empty,Empty]]
 
+emptyBoard =[[Empty,Blue,Empty,Empty,Empty,Empty,Empty,Empty],
+			[Empty,Empty,Empty,Empty,Empty,Empty,Empty,Empty],
+			[Empty,QWhite,Empty,Blue,Empty,Blue,Empty,Empty],
+			[Empty,Empty,Empty,Empty,Empty,Empty,Blue,Empty],
+			[Empty,Empty,Empty,Blue,Empty,Empty,Empty,Empty],
+			[Empty,Empty,Empty,Empty,Empty,Empty,Empty,Empty],
+			[Empty,Empty,Empty,Empty,Empty,Empty,Empty,Empty],
+			[Empty,Empty,Empty,Empty,QWhite,Empty,Empty,Empty]]
+
 instance Show Pawn where
 	show White = "w" 
 	show Blue = "b"
@@ -53,8 +62,9 @@ data Board = Board [[Pawn]] deriving Show
 printRow [] = ""
 printRow (x:xs) = show x ++ "" ++ printRow xs
 
-printBoard [] = ""
-printBoard (x:xs) = printRow x ++ "\n" ++ printBoard xs
+printBoard [] _ = ""
+printBoard xs 0 = "  12345678\n" ++ printBoard xs 1
+printBoard (x:xs) d = (show) d ++ " " ++ printRow x ++ "\n" ++ printBoard xs (d+1)
 
 parseStr "" = []
 parseStr (x:xs) = x : parseStr xs
@@ -112,9 +122,11 @@ checkPossiblePos (p:ps) (d:ds) z pawn last jump board
 	|	(pawn == White) && (onBoard p) && ((getPawn p board == Blue) || (getPawn p board == QBlue)) && (onBoard (tupSum p d)) && (getPawn (tupSum p d) board == Empty) = 
 		checkPossiblePos ps ds z pawn [] jump board ++ checkPossiblePos (map (tupSum (tupSum p d)) directions) directions 9 pawn [(tupSum p d)] (jump+1) (setPos (tupSum p d) pawn (setPos p Empty board))
 	|	(pawn == QWhite) && (onBoard p) && ((getPawn p board == Blue) || (getPawn p board == QBlue)) && (onBoard (tupSum p d))  && (getPawn (tupSum p d) board == Empty) = 
-		(zip (zip [(tupSum p d)] [jump+1]) [(setPos (tupSum p d) pawn (setPos p Empty board))]) ++ checkPossiblePos ps ds 1 pawn [] jump board ++ checkPossiblePos [(tupSum p d)] [d] 1 pawn [p] (jump+1) (setPos p Empty board) ++ checkPossiblePos (map (tupSum (tupSum p d)) (reverseDirection d directions)) (reverseDirection d directions) 0 pawn [(tupSum p d)] (jump+1) (setPos p Empty board)
+		(zip (zip [(tupSum p d)] [jump+1]) [(setPos (tupSum p d) pawn (setPos p Empty board))]) ++ checkPossiblePos ps ds 1 pawn [] jump board ++ checkPossiblePos [(tupSum p d)] [d] 1 pawn [p] (jump+1) (setPos p Empty board)  ++ checkPossiblePos (map (tupSum (tupSum p d)) (reverseDirection d directions)) (reverseDirection d directions) 0 pawn [(tupSum p d)] (jump+1) (setPos p Empty board)
 	|	((pawn == QWhite) || (pawn == QBlue)) && (onBoard p) && (z == 1) && (getPawn p board == Empty) = 
-		(zip (zip [p] [jump]) [(setPos p pawn board)])  ++ checkPossiblePos ps ds z pawn last jump board ++ checkPossiblePos [(tupSum p d)] [d] z pawn [p] (jump) board ++ checkPossiblePos (map (tupSum p) (reverseDirection d directions)) (reverseDirection d directions) 0 pawn [] (jump) board	
+		(zip (zip [p] [jump]) [(setPos p pawn board)])  ++ checkPossiblePos ps ds z pawn last jump board ++ checkPossiblePos [(tupSum p d)] [d] z pawn [p] (jump) board  ++ checkPossiblePos (map (tupSum p) (reverseDirection d directions)) (reverseDirection d directions) 0 pawn [] (jump) board	
+	|	((pawn == QWhite) || (pawn == QBlue))  && (jump == 0) && (onBoard p) && (z == 0) && (getPawn p board == Empty) = (zip (zip [p] [jump]) [(setPos p pawn board)]) ++  checkPossiblePos ps ds z pawn last jump board ++ checkPossiblePos [(tupSum p d)] [d] z pawn [p] (jump) board
+	|	((pawn == QWhite) || (pawn == QBlue))  && (onBoard p) && (z == 0) && (getPawn p board == Empty) = checkPossiblePos ps ds z pawn last jump board ++ checkPossiblePos [(tupSum p d)] [d] z pawn [p] (jump) board
 	|	((snd d) == z) && (onBoard p) && (getPawn p board == Empty) && ((pawn == Blue) || (pawn == White)) =  
 		(zip (zip [p] [jump]) [(setPos p pawn board)]) ++ checkPossiblePos ps ds z pawn last jump ((setPos p Empty board))
 	| 	otherwise = checkPossiblePos ps ds z pawn last jump board
@@ -125,7 +137,7 @@ findPossiblePos (x,y) pawn@White board = checkPossiblePos (map (tupSum (x,y)) di
 
 findPossiblePos (x,y) pawn@Empty board = []
 
-findPossiblePos (x,y) pawn@QWhite board = checkPossiblePos (map (tupSum (x,y)) directions) directions 1 pawn [] 0 board
+findPossiblePos (x,y) pawn@QWhite board = checkPossiblePos (map (tupSum (x,y)) directions) directions 0 pawn [] 0 board
 
 findPossiblePos (x,y) pawn@QBlue board = checkPossiblePos (map (tupSum (x,y)) directions) directions (-1) pawn [] 0 board
 
@@ -159,7 +171,15 @@ findPossibleBoard (x,y) (d:ds)
 	|	((fst d) == (x,y)) = snd d ++ findPossibleBoard (x,y) ds
 	| 	otherwise = findPossibleBoard (x,y) ds
 
---isFinalState board = 
+checkEndRow [] _ = True
+checkEndRow (r:rs) player 
+	| (player == "1") && ((r == Blue) || (r == QBlue)) = False && checkEndRow rs player
+	| (player == "2") && ((r == White) || (r == QWhite)) = False && checkEndRow rs player
+	| otherwise = True && checkEndRow rs player
+checkEnd [] _ = True
+checkEnd (x:xs) player = checkEndRow x player && checkEnd xs player
+
+isFinalState board player = checkEnd board player
 
 toTup s = (a,b) where
 	a = (ord (head s)) - 48
@@ -169,24 +189,33 @@ changePlayer v
 	| (v == "1") = "2"
 	| (v == "2") = "1"
 
-checkMove x player board
+checkMove x player ruch ruch2 board 
 	| (x == False) = gameLoop board player
-	| otherwise = putStr "Poprawny ruch\n"
+	| (player == "1") && (((getPawn (toTup ruch) board) == White) || ((getPawn (toTup ruch) board) == QWhite)) = gameLoop board player
+	| (player == "2") && (((getPawn (toTup ruch) board) == Blue) || ((getPawn (toTup ruch) board) == QBlue)) = gameLoop board player
+	| otherwise = gameLoop(setQ ((findPossibleBoard (toTup ruch2) (possiblePos (toTup ruch) board))) 1) (changePlayer player)
 
-gameLoop board player = do 
-	putStr (printBoard board)
-	putStr ("Ruch gracza: " ++ player ++ "\n")
-	putStr ("Wybierz pionek ( np. 2,3)\n")
-	ruch <- getLine
-	putStr "Przesun na pozycje: "
-	ruch2 <- getLine
-	putStr ("Twoj ruch to " ++ ruch ++ " na pozycje " ++ ruch2 ++ "\n")
-	let x = (toTup ruch2) `elem` (listPossiblePos (toTup ruch) board)
-	checkMove x player board 
+infoAboutEnd player 
+	| (player == "1") = putStr ("Koniec gry. Wygrana gracza 2\n")
+	| (player == "2") = putStr ("Koniec gry. Wygrana gracza 1\n")
+
+gameLoop board player
+	| 	isFinalState board player = infoAboutEnd player
+	| 	otherwise = do 
+		putStr (printBoard board 0)
+		putStr ("Gracz 1 (blue), Gracz 2 (white)\n")
+		putStr ("Ruch gracza: " ++ player ++ "\n")
+		putStr ("Wybierz pionek ( np. 2,3 - gdzie 2 to kolumna, 3 to rzad)\n")
+		ruch <- getLine
+		putStr "Przesun na pozycje: "
+		ruch2 <- getLine
+		putStr ("Twoj ruch to " ++ ruch ++ " na pozycje " ++ ruch2 ++ "\n")
+		let x = (toTup ruch2) `elem` (listPossiblePos (toTup ruch) board)
+		checkMove x player ruch ruch2 board 
 	--putStr (printBoard (findPossibleBoard (toTup ruch2) (possiblePos (toTup ruch) board)))
-	gameLoop (setQ ((findPossibleBoard (toTup ruch2) (possiblePos (toTup ruch) board))) 1) 	(changePlayer player)
+		--gameLoop(setQ ((findPossibleBoard (toTup ruch2) (possiblePos (toTup ruch) board))) 1) (changePlayer player)
 	
-main = gameLoop testingBoard "1"
+main = gameLoop emptyBoard "1"
 
 -- TODO gracze, ktory ma wykonac ruch(sprawdzenie pionkow)
-
+-- gracz 1 niebieski, gracz 2 bialy
